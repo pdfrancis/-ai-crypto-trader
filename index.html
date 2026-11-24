@@ -1,27 +1,328 @@
-<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Whitney AI Trading</title>
+
 <style>
-body{margin:0;background:#0d1424;color:#eef3ff;font:16px system-ui;padding:20px}
-main{max-width:700px;margin:auto}section{background:#18243a;border:1px solid #30415e;border-radius:14px;padding:16px;margin:12px 0}
-h1{font-size:26px}.muted{color:#aab8ce}.warn{background:#42351b;padding:12px;border-radius:10px;color:#ffe2a1}
-button{background:#83a2ff;color:#101a30;border:0;border-radius:9px;padding:12px;font-weight:bold}
-input,select{padding:10px;border-radius:8px;background:#0d1424;color:white;border:1px solid #40516c;width:100%;margin:6px 0}
-</style></head><body><main>
-<h1>Whitney AI Trading</h1><p class="muted">Crypto research · Paper trading prototype</p>
-<p class="warn"><b>SIMULATION ONLY.</b> Sample prices are illustrative, not live quotes. No wallet connection or real trades.</p>
-<section><p class="muted">SIMULATED PORTFOLIO VALUE</p><h2 id="balance">$500.00</h2><p>Available cash: <b id="cash">$500.00</b></p><p id="pnl">Profit/loss: $0.00</p></section>
-<section><h3>Sample market watch</h3><div id="markets"></div><p class="muted">Prices are fixed demo values for testing the interface.</p></section>
-<section><h3>Paper trade</h3><label>Asset</label><select id="coin"><option value="BTC">Bitcoin — $67,500</option><option value="ETH">Ethereum — $3,450</option><option value="SOL">Solana — $182</option><option value="DOGE">Dogecoin — $0.16</option></select>
-<label>Action</label><select id="action"><option>Buy</option><option>Sell</option></select>
-<label>Dollar amount (maximum $25)</label><input id="amount" type="number" value="10" min=".01" max="25" step=".01">
-<button onclick="trade()">Run simulated trade</button><button onclick="reset()" style="margin-left:8px">Reset</button><p id="message" class="muted"></p></section>
-<section><h3>Eight agent roles</h3><ol><li>Scanner — market watch</li><li>Market Analyst — trend review</li><li>Risk Manager — trade limits</li><li>Whale Tracker — planned feature</li><li>Rug Detector — planned feature</li><li>Trade Executor — simulated orders only</li><li>Exit Manager — planned feature</li><li>Head of Desk — planned coordinator</li></ol><p class="muted">These are role placeholders, not active AI agents.</p></section>
-<section><h3>Trade history</h3><div id="history" class="muted">No trades yet.</div></section>
-</main><script>
-const prices={BTC:67500,ETH:3450,SOL:182,DOGE:.16};let cash=500,hold={},history=[],realized=0;
-function render(){document.getElementById('cash').textContent='$'+cash.toFixed(2);let val=cash+Object.keys(hold).reduce((s,k)=>s+hold[k]*prices[k],0);document.getElementById('balance').textContent='$'+val.toFixed(2);document.getElementById('pnl').textContent='Profit/loss: $'+(val-500).toFixed(2);document.getElementById('markets').innerHTML=Object.keys(prices).map(k=>k+': $'+prices[k]).join('<br>');document.getElementById('history').innerHTML=history.length?history.slice().reverse().join('<br>'):'No trades yet.'}
-function trade(){let k=document.getElementById('coin').value,side=document.getElementById('action').value,amt=Number(document.getElementById('amount').value),fee=amt*.001;let m=document.getElementById('message');if(!Number.isFinite(amt)||amt<=0||amt>25){m.textContent='Blocked: trade must be between $0.01 and $25.';return}if(side==='Buy'){if(amt+fee>cash){m.textContent='Blocked: insufficient simulated cash.';return}cash-=amt+fee;hold[k]=(hold[k]||0)+amt/prices[k]}else{let units=amt/prices[k];if(units>(hold[k]||0)){m.textContent='Blocked: not enough simulated holdings.';return}hold[k]-=units;cash+=amt-fee}history.push(new Date().toLocaleTimeString()+' — '+side+' '+k+' $'+amt.toFixed(2)+' (fee $'+fee.toFixed(2)+')');render();m.textContent='Simulated trade recorded. No real order was placed.'}
-function reset(){if(confirm('Reset the simulated account to $500 and erase history?')){cash=500;hold={};history=[];render();document.getElementById('message').textContent='Simulation reset.'}}
+body {
+  margin: 0;
+  background: #0d1424;
+  color: #eef3ff;
+  font: 16px system-ui;
+  padding: 20px;
+}
+main {
+  max-width: 700px;
+  margin: auto;
+}
+section {
+  background: #18243a;
+  border: 1px solid #30415e;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 12px 0;
+}
+h1 { font-size: 26px; }
+.muted { color: #aab8ce; }
+.warn {
+  background: #42351b;
+  padding: 12px;
+  border-radius: 10px;
+  color: #ffe2a1;
+}
+button {
+  background: #83a2ff;
+  color: #101a30;
+  border: 0;
+  border-radius: 9px;
+  padding: 12px;
+  font-weight: bold;
+  margin: 5px 0;
+}
+input, select {
+  padding: 10px;
+  border-radius: 8px;
+  background: #0d1424;
+  color: white;
+  border: 1px solid #40516c;
+  width: 100%;
+  margin: 6px 0;
+  box-sizing: border-box;
+}
+.price {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #30415e;
+}
+</style>
+</head>
+
+<body>
+<main>
+
+<h1>Whitney AI Trading</h1>
+<p class="muted">Crypto research · Paper trading prototype</p>
+
+<p class="warn">
+<b>SIMULATION ONLY.</b>
+No real cryptocurrency is purchased.
+Live prices are informational only.
+</p>
+
+<section>
+<h3>SIMULATED PORTFOLIO</h3>
+<h2 id="balance">$500.00</h2>
+<p>Available cash: <b id="cash">$500.00</b></p>
+<p id="pnl">Profit/loss: $0.00</p>
+</section>
+
+<section>
+<h3>LIVE CRYPTO MARKET</h3>
+<p class="muted" id="priceStatus">Connecting to price feed...</p>
+<div id="markets"></div>
+<button onclick="updateLivePrices()">Refresh Prices</button>
+<p class="muted">Prices update automatically every 60 seconds.</p>
+</section>
+
+<section>
+<h3>Paper Trade</h3>
+
+<label>Asset</label>
+<select id="coin">
+<option value="BTC">Bitcoin</option>
+<option value="ETH">Ethereum</option>
+<option value="SOL">Solana</option>
+<option value="DOGE">Dogecoin</option>
+</select>
+
+<label>Action</label>
+<select id="action">
+<option>Buy</option>
+<option>Sell</option>
+</select>
+
+<label>Dollar amount (maximum $25)</label>
+<input id="amount" type="number" value="10" min="0.01" max="25" step="0.01">
+
+<button onclick="trade()">Run Simulated Trade</button>
+<button onclick="reset()">Reset Account</button>
+
+<p id="message" class="muted"></p>
+</section>
+
+<section>
+<h3>Eight AI Agent Roles</h3>
+<ol>
+<li>Scanner — Market watch</li>
+<li>Market Analyst — Trend review</li>
+<li>Risk Manager — Trade limits</li>
+<li>Whale Tracker — Planned feature</li>
+<li>Rug Detector — Planned feature</li>
+<li>Trade Executor — Simulated orders</li>
+<li>Exit Manager — Planned feature</li>
+<li>Head of Desk — Planned coordinator</li>
+</ol>
+<p class="muted">These are planned roles, not active AI agents.</p>
+</section>
+
+<section>
+<h3>Trade History</h3>
+<div id="history" class="muted">No trades yet.</div>
+</section>
+
+</main>
+
+<script>
+
+const prices = {
+  BTC: 67500,
+  ETH: 3450,
+  SOL: 182,
+  DOGE: 0.16
+};
+
+const names = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  DOGE: "dogecoin"
+};
+
+let cash = 500;
+let hold = {};
+let history = [];
+
+function money(value) {
+  return "$" + value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function render() {
+
+  document.getElementById("cash").textContent = money(cash);
+
+  let holdingsValue = Object.keys(hold).reduce(
+    (total, coin) => total + hold[coin] * prices[coin],
+    0
+  );
+
+  let total = cash + holdingsValue;
+
+  document.getElementById("balance").textContent = money(total);
+
+  document.getElementById("pnl").textContent =
+    "Profit/loss: " + money(total - 500);
+
+  document.getElementById("markets").innerHTML =
+    Object.keys(prices).map(coin =>
+      `<div class="price">
+        <span>${coin}</span>
+        <b>${money(prices[coin])}</b>
+      </div>`
+    ).join("");
+
+  document.getElementById("history").innerHTML =
+    history.length
+      ? history.slice().reverse().join("<br><br>")
+      : "No trades yet.";
+}
+
+async function updateLivePrices() {
+
+  const status = document.getElementById("priceStatus");
+
+  status.textContent = "Updating live prices...";
+
+  try {
+
+    const response = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,dogecoin&vs_currencies=usd"
+    );
+
+    if (!response.ok) {
+      throw new Error("Price service unavailable");
+    }
+
+    const data = await response.json();
+
+    const newPrices = {
+      BTC: data.bitcoin?.usd,
+      ETH: data.ethereum?.usd,
+      SOL: data.solana?.usd,
+      DOGE: data.dogecoin?.usd
+    };
+
+    for (const coin of Object.keys(newPrices)) {
+      if (
+        typeof newPrices[coin] !== "number" ||
+        !Number.isFinite(newPrices[coin]) ||
+        newPrices[coin] <= 0
+      ) {
+        throw new Error("Invalid price received");
+      }
+    }
+
+    Object.assign(prices, newPrices);
+
+    status.textContent =
+      "Live prices connected. Last updated: " +
+      new Date().toLocaleTimeString();
+
+    render();
+
+  } catch (error) {
+
+    status.textContent =
+      "Live prices unavailable. Showing last available prices.";
+
+    console.log(error);
+  }
+}
+
+function trade() {
+
+  let coin = document.getElementById("coin").value;
+  let side = document.getElementById("action").value;
+  let amount = Number(document.getElementById("amount").value);
+
+  let fee = amount * 0.001;
+  let message = document.getElementById("message");
+
+  if (
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    amount > 25
+  ) {
+    message.textContent =
+      "Blocked: Trade must be between $0.01 and $25.";
+    return;
+  }
+
+  if (side === "Buy") {
+
+    if (amount + fee > cash) {
+      message.textContent = "Insufficient simulated cash.";
+      return;
+    }
+
+    cash -= amount + fee;
+
+    hold[coin] =
+      (hold[coin] || 0) + amount / prices[coin];
+
+  } else {
+
+    let units = amount / prices[coin];
+
+    if (units > (hold[coin] || 0)) {
+      message.textContent =
+        "Not enough simulated holdings to sell.";
+      return;
+    }
+
+    hold[coin] -= units;
+    cash += amount - fee;
+  }
+
+  history.push(
+    new Date().toLocaleTimeString() +
+    " — " + side + " " + coin +
+    " " + money(amount) +
+    " (fee " + money(fee) + ")"
+  );
+
+  render();
+
+  message.textContent =
+    "Simulated trade recorded. No real order placed.";
+}
+
+function reset() {
+
+  if (confirm("Reset account to $500 and erase trade history?")) {
+
+    cash = 500;
+    hold = {};
+    history = [];
+
+    render();
+
+    document.getElementById("message").textContent =
+      "Simulation reset.";
+  }
+}
+
 render();
-</script></body></html>
+updateLivePrices();
+
+setInterval(updateLivePrices, 60000);
+
+</script>
+
+</body>
+</html>
